@@ -1,0 +1,3 @@
+/home/oemre/workspace/beaglebone-deleteme/cmake-build-debug/CMakeFiles/beaglebone_deleteme.dir
+/home/oemre/workspace/beaglebone-deleteme/cmake-build-debug/CMakeFiles/edit_cache.dir
+/home/oemre/workspace/beaglebone-deleteme/cmake-build-debug/CMakeFiles/rebuild_cache.dir

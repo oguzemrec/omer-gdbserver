@@ -1,0 +1,50 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"type": "shell",
+			"label": "Build Application",
+			"command": "cmake --build .",
+			"options": {
+				"cwd": "${workspaceFolder}/build"
+			},
+		},
+		{
+			"type": "shell",
+			"label": "Copy Application",
+			"command": "scp hello root@${config:target_ip}:/tmp",
+			"options": {
+				"cwd": "${workspaceFolder}/build"
+			},
+		},
+		{
+			"label": "Start GDB Server",
+			"type": "shell",
+			"command": "ssh",
+			"args": [
+				"root@${config:target_ip}",
+				"gdbserver :${config:gdb_server_port} /tmp/hello"
+			],
+			"dependsOn": [
+				"Kill Gdbserver",
+				"Build Application",
+				"Copy Application"
+			],
+			"dependsOrder": "sequence",
+		},
+		{
+			"label": "Kill Gdbserver",
+			"type": "shell",
+			"command": "ssh root@${config:target_ip} 'kill $(pidof gdbserver)|| echo 0'",
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			},
+			"problemMatcher": [],
+			"presentation": {
+				"reveal": "silent",
+				"close": true
+			}
+		},
+	]
+}

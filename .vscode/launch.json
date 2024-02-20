@@ -1,0 +1,17 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "gdb",
+            "request": "attach",
+            "name": "Attach to gdbserver",
+            "gdbpath": "/home/oemre/workspace/buildroot-bbb/buildroot/output/host/bin/arm-buildroot-linux-gnueabihf-gdb",
+            "executable": "${workspaceFolder}/build/hello",
+            "target": "${config:target_ip}:${config:gdb_server_port}",
+            "remote": true,
+            "printCalls": true,
+            "cwd": "${workspaceRoot}",
+            "valuesFormatting": "parseText",
+        }
+    ]
+}
