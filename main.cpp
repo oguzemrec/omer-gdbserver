@@ -2,50 +2,90 @@
 #include <thread>
 #include <chrono>
 
-void task1()
+#define EUSART1_TX_BUFFER_SIZE (16) //buffer size should be 2^n
+#define EUSART1_TX_BUFFER_MASK (EUSART1_TX_BUFFER_SIZE - 1)
+
+
+#define EUSART1_RX_BUFFER_SIZE (16) //buffer size should be 2^n
+#define EUSART1_RX_BUFFER_MASK (EUSART1_RX_BUFFER_SIZE - 1)
+
+static volatile uint8_t eusart1TxHead = 0;
+static volatile uint8_t eusart1TxTail = 0;
+static volatile uint8_t eusart1TxBuffer[EUSART1_TX_BUFFER_SIZE];
+volatile uint8_t eusart1TxBufferRemaining;
+
+
+static volatile uint8_t eusart1RxHead = 0;
+static volatile uint8_t eusart1RxTail = 0;
+static volatile uint8_t eusart1RxBuffer[EUSART1_RX_BUFFER_SIZE];
+static volatile eusart1_status_t eusart1RxStatusBuffer[EUSART1_RX_BUFFER_SIZE];
+volatile uint8_t eusart1RxCount;
+
+
+volatile eusart1_status_t eusart1RxLastError;
+
+void write_packet(uint8_t* txData, int packet_size)
 {
-  std::cout << "Thread 1 started\n";
-  std::this_thread::sleep_for(std::chrono::seconds(1));
-  std::cout << "Thread 1 ended\n";
+    PO_DE = 0; //TX Enable
+
+    uint8_t tempTxHead;
+    
+    for ( int i=1; i < packet_size; ++i ){
+      eusart1TxBuffer[i-1] = txData + i;
+       tempTxHead = (eusart1TxHead + 1) & EUSART1_TX_BUFFER_MASK;
+       
+       eusart1TxHead = tempTxHead;
+       PIE1bits.TX1IE = 0; //Critical value decrement
+       eusart1TxBufferRemaining--; // one less byte remaining in TX buffer
+    }
+
+
+/// Old Code
+    if(0 == PIE1bits.TX1IE)
+    {
+        TXREG1 = txData;
+    }
+    else if(eusart1TxBufferRemaining) // check if at least one byte place is available in TX buffer
+    {
+       eusart1TxBuffer[eusart1TxHead] = txData;
+       tempTxHead = (eusart1TxHead + 1) & EUSART1_TX_BUFFER_MASK;
+       
+       eusart1TxHead = tempTxHead;
+       PIE1bits.TX1IE = 0; //Critical value decrement
+       eusart1TxBufferRemaining--; // one less byte remaining in TX buffer
+    }
+    else
+    {
+        //overflow condition; eusart1TxBufferRemaining is 0 means TX buffer is full
+    }
+    PIE1bits.TX1IE = 1;
+    
 }
 
-void task2()
+void EUSART1_TransmitISR(void)
 {
-  std::cout << "Thread 2 started\n";
-  std::this_thread::sleep_for(std::chrono::seconds(2));
-  std::cout << "Thread 2 ended\n";
+    uint8_t tempTxTail;
+    // use this default transmit interrupt handler code
+    if(sizeof(eusart1TxBuffer) > eusart1TxBufferRemaining) // check if all data is transmitted
+    {
+       TXREG1 = eusart1TxBuffer[eusart1TxTail];
+       tempTxTail = (eusart1TxTail + 1) & EUSART1_TX_BUFFER_MASK;
+       
+       eusart1TxTail = tempTxTail;
+       eusart1TxBufferRemaining++; // one byte sent, so 1 more byte place is available in TX buffer
+    }
+    else
+    {
+        PIE1bits.TX1IE = 0;
+        PO_DE = 1; //RX Enable
+    }
+    
 }
-
-void task3()
-{
-  std::cout << "Thread 3 started\n";
-  std::this_thread::sleep_for(std::chrono::seconds(3));
-  std::cout << "Thread 3 ended\n";
-
-   int* ptr = nullptr;
-    *ptr = 42;  // Attempting to dereference a null pointer
-    std::cout << *ptr << std::endl;  // This line may cause a segmentation fault
-  while (1)
-  {
-    static int count{0};
-    std::cout << count++ << std::endl;
-    std::this_thread::sleep_for(std::chrono::seconds(1));
-  }
-}
-
 int main()
 {
 
-  std::cout << "Main thread started\n";
-  std::thread t1(task1);
-  std::thread t2(task2);
-  std::thread t3(task3);
 
-  // Wait for all threads to finish
-  t1.join();
-  t2.join();
-  t3.join();
-
-  std::cout << "Main thread ended\n";
-  return 0;
 }
+
+
+
